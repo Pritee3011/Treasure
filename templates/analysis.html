@@ -2,45 +2,91 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YourTreasurer - Insights</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/Style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body { background: #f4f7f9; font-family: 'Poppins', sans-serif; margin: 0; padding: 20px; }
-        .analysis-container { max-width: 1100px; margin: 40px auto; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .btn-back { text-decoration: none; color: #002366; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        /* Reset and Base Styles */
+        * { box-sizing: border-box; }
+        body { 
+            background: #f4f7f9; 
+            font-family: 'Poppins', sans-serif; 
+            margin: 0; 
+            padding: 10px; 
+            overflow-x: hidden; /* Prevents horizontal scroll */
+        }
 
+        .analysis-container { 
+            max-width: 1000px; 
+            margin: 20px auto; 
+            padding: 0 10px;
+        }
+        
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-back { 
+            text-decoration: none; 
+            color: #002366; 
+            font-weight: 600; 
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Flex Grid */
         .dashboard-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 25px; 
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
         }
 
         .chart-card {
             background: #ffffff;
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 35, 102, 0.05);
-            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 35, 102, 0.05);
             border: 1px solid #e1e8ed;
-        }
-
-        .full-width { grid-column: span 2; }
-
-        .stat-box {
+            flex: 1 1 calc(50% - 20px); /* Two columns on desktop */
+            min-width: 300px; /* Forces single column on small screens */
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
         }
 
-        .total-amount { font-size: 3.5rem; font-weight: 800; color: #002366; margin: 10px 0; }
-        .label { color: #657786; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+        .full-width { 
+            flex: 1 1 100%; 
+        }
 
-        h3 { color: #002366; margin-bottom: 20px; font-size: 1.2rem; }
+        /* Stat Styles */
+        .stat-box { justify-content: center; min-height: 250px; }
+        .total-amount { 
+            font-size: 2.5rem; 
+            font-weight: 800; 
+            color: #002366; 
+            margin: 10px 0; 
+        }
+        .label { 
+            color: #657786; 
+            font-size: 0.8rem; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+        }
+
+        h3 { color: #002366; margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; }
+        
+        canvas { 
+            max-width: 100% !important; 
+            height: auto !important; 
+        }
     </style>
 </head>
 <body>
@@ -48,25 +94,29 @@
 <div class="analysis-container">
     <div class="header">
         <a href="/history" class="btn-back">← Back to History</a>
-        <h2 style="color: #002366; margin: 0;">Financial Intelligence</h2>
-        <div id="userTag" style="color: #657786; font-size: 0.9rem;"></div>
+        <h2 style="color: #002366; margin: 0; font-size: 1.4rem;">Financial Intelligence</h2>
+        <div id="userTag" style="color: #657786; font-size: 0.85rem;"></div>
     </div>
 
     <div class="dashboard-grid">
         <div class="chart-card stat-box">
             <span class="label">Total Monthly Outflow</span>
             <div class="total-amount" id="totalDisplay">₹0</div>
-            <p id="statusMsg" style="color: #1db954; font-weight: 600;"></p>
+            <p id="statusMsg" style="color: #1db954; font-weight: 600; font-size: 0.9rem; margin-top: 5px;"></p>
         </div>
 
         <div class="chart-card">
             <h3>Spend by Category</h3>
-            <canvas id="categoryChart" height="250"></canvas>
+            <div style="width: 100%; height: 200px;">
+                <canvas id="categoryChart"></canvas>
+            </div>
         </div>
 
         <div class="chart-card full-width">
             <h3>30-Day Spending Trend</h3>
-            <canvas id="trendChart" height="100"></canvas>
+            <div style="width: 100%; height: 180px;">
+                <canvas id="trendChart"></canvas>
+            </div>
         </div>
     </div>
 </div>
@@ -77,75 +127,65 @@
     if (!loggedUser) {
         window.location.href = '/my_profile';
     } else {
-        $('#userTag').text("Analyzing: " + loggedUser);
+        $('#userTag').text("User: " + loggedUser);
         fetchAnalysisData();
     }
 
     function fetchAnalysisData() {
         $.get(`/api/analysis_data/${loggedUser}`, function(data) {
             
-            // 1. Update the Big Number
             const total = data.category_amounts.reduce((a, b) => a + b, 0);
             $('#totalDisplay').text(`₹${total.toLocaleString()}`);
             
             if (total > 4000) {
-                $('#statusMsg').text("Approaching your threshold!").css('color', '#ff4d4d');
+                $('#statusMsg').text("Approaching threshold!").css('color', '#ff4d4d');
             } else {
-                $('#statusMsg').text("Spending is within healthy limits.");
+                $('#statusMsg').text("Within healthy limits.");
             }
 
-            // 2. Category Doughnut Chart
+            // Doughnut Chart
             new Chart(document.getElementById('categoryChart'), {
                 type: 'doughnut',
                 data: {
                     labels: data.categories,
                     datasets: [{
                         data: data.category_amounts,
-                        backgroundColor: [
-                            '#002366', // Navy
-                            '#00d4ff', // Light Blue
-                            '#1db954', // Green
-                            '#ff4d4d', // Red
-                            '#ffb100', // Yellow
-                            '#9d50bb'  // Purple
-                        ],
-                        borderWidth: 0
+                        backgroundColor: ['#002366', '#00d4ff', '#1db954', '#ff4d4d', '#ffb100', '#9d50bb'],
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
+                    animation: false, // Disables sliding animations
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
                 }
             });
 
-            // 3. Daily Trend Line Chart
+            // Trend Chart
             new Chart(document.getElementById('trendChart'), {
                 type: 'line',
                 data: {
                     labels: data.dates,
                     datasets: [{
-                        label: 'Spending (₹)',
+                        label: 'Spending',
                         data: data.daily_amounts,
                         borderColor: '#00d4ff',
                         backgroundColor: 'rgba(0, 212, 255, 0.1)',
                         fill: true,
-                        tension: 0.4,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#002366'
+                        tension: 0, // Solid straight lines for stability
+                        pointRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false, // Disables sliding animations
                     scales: {
-                        y: { beginAtZero: true, grid: { display: false } },
+                        y: { beginAtZero: true, grid: { color: '#f0f0f0' } },
                         x: { grid: { display: false } }
                     },
-                    plugins: {
-                        legend: { display: false }
-                    }
+                    plugins: { legend: { display: false } }
                 }
             });
         });
