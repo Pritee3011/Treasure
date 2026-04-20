@@ -58,7 +58,7 @@ The project includes an automated test suite (`test_app.py`) covering:
 * **Route Integrity:** Ensuring all 200 OK status codes for core navigation.
 
 ## 📊 4. Deployment Evidence
-* **CI/CD Status:** [View GitHub Actions](https://github.com/Pritee3011/YourTreasurer/actions)
+* **CI/CD Status:** [View GitHub Actions](https://github.com/Pritee3011/Treasure/actions)
 * **Live Demo:** [YourTreasurer on Render](https://treasure-1-yblo.onrender.com/)
 
 ``
